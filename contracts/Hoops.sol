@@ -27,22 +27,6 @@ interface IERC2981Royalties {
         returns (address _receiver, uint256 _royaltyAmount);
 }
 
-// mint price of hoops
-// whitelist -- .0824
-// mint price -- .1
-// mint max -- 20
-
-// Hoops
-// HOOPS
-
-// royalty percentage - 10%
-
-// owner address + seed phrase + private key
-
-// art editable
-
-// 
-
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
  * the Metadata and Enumerable extension. Built to optimize for lower gas during batch mints.
@@ -199,7 +183,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
     function tokenOfOwnerByIndex(address tokenOwner, uint256 index) public view override returns (uint256) {
         require(index < balanceOf(tokenOwner), 'oIdx>bnds'); //  owner index out of bounds
         uint256 tokenIdsIdx;
-        address currOwnershipAddr;
+        //ddress currOwnershipAddr;
 
         // Counter overflow is impossible as the loop breaks when uint256 i is equal to another uint256 numMintedSoFar.
         unchecked {
