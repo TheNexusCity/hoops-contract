@@ -27,6 +27,22 @@ interface IERC2981Royalties {
         returns (address _receiver, uint256 _royaltyAmount);
 }
 
+// mint price of hoops
+// whitelist -- .0824
+// mint price -- .1
+// mint max -- 20
+
+// Hoops
+// HOOPS
+
+// royalty percentage - 10%
+
+// owner address + seed phrase + private key
+
+// art editable
+
+// 
+
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
  * the Metadata and Enumerable extension. Built to optimize for lower gas during batch mints.
@@ -183,14 +199,17 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
     function tokenOfOwnerByIndex(address tokenOwner, uint256 index) public view override returns (uint256) {
         require(index < balanceOf(tokenOwner), 'oIdx>bnds'); //  owner index out of bounds
         uint256 tokenIdsIdx;
-        //ddress currOwnershipAddr;
+        address currOwnershipAddr;
 
         // Counter overflow is impossible as the loop breaks when uint256 i is equal to another uint256 numMintedSoFar.
         unchecked {
             for (uint256 i; i < currentIndex; i++) {
                 TokenOwnership memory ownership = _ownerships[i];
-                if (ownership.addr != address(0) && ownership.addr == tokenOwner ) {
-                   if (tokenIdsIdx == index) {
+                if (ownership.addr != address(0)) {
+                    currOwnershipAddr = ownership.addr;
+                }
+                if (currOwnershipAddr == tokenOwner) {
+                    if (tokenIdsIdx == index) {
                         return i;
                     }
                     tokenIdsIdx++;
@@ -234,9 +253,11 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
         require(_exists(tokenId), 'notoken'); //  owner query for nonexistent token
 
         unchecked {
-            TokenOwnership memory ownership = _ownerships[tokenId];
-            if (ownership.addr != address(0)) {
-                return ownership;
+            for (uint256 curr = tokenId; curr >= 0; curr--) {
+                TokenOwnership memory ownership = _ownerships[curr];
+                if (ownership.addr != address(0)) {
+                    return ownership;
+                }
             }
         }
 
@@ -428,6 +449,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
         bytes32 _r,
         bytes32 _s
     ) internal onlyValidAccess(_v, _r, _s) {
+        uint256 startTokenId = currentIndex;
         require(to != address(0), 'Cannot send to 0x0'); // mint to the 0x0 address
         require(quantity != 0, 'Quantity cannot be 0'); // quantity must be greater than 0
         require(quantity <= _maxMintQuantity, 'Quantity exceeds mint max'); // quantity must be 5 or less
@@ -435,20 +457,30 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
         require(currentIndex <= 10000, 'No Hoops left!'); // sold out
         require(currentIndex + quantity <= 10000, 'Not enough Hoops left!'); // cannot mint more than maxIndex tokens
 
+        _beforeTokenTransfers(address(0), to, startTokenId, quantity);
+
         unchecked {
             _addressData[to].balance += uint128(quantity);
             _addressData[to].numberMinted += uint128(quantity);
+
+            _ownerships[startTokenId].addr = to;
+            _ownerships[startTokenId].startTimestamp = uint64(block.timestamp);
+
+            uint256 updatedIndex = startTokenId;
+
             for (uint256 i; i < quantity; i++) {
-                emit Transfer(address(0), to, currentIndex);
-                require(
-                    _checkOnERC721Received(address(0), to, currentIndex, ''),
-                    'Not ERC721Receiver' // transfer to non ERC721Receiver implementer
-                );
-                _ownerships[currentIndex].addr = to;
-                _ownerships[currentIndex].startTimestamp = uint64(block.timestamp);
-                currentIndex++;
+                emit Transfer(address(0), to, updatedIndex);
+                    require(
+                        _checkOnERC721Received(address(0), to, updatedIndex, ''),
+                        'Not ERC721Receiver' // transfer to non ERC721Receiver implementer
+                    );
+
+                updatedIndex++;
             }
+
+            currentIndex = updatedIndex;
         }
+        _afterTokenTransfers(address(0), to, startTokenId, quantity);
     }
 
     /**
@@ -473,9 +505,10 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
             isApprovedForAll(prevOwnership.addr, msg.sender));
 
         require(isApprovedOrOwner, 'notapproved'); //  transfer caller is not owner nor approved
-
         require(prevOwnership.addr == from, 'badowner'); // transfer from incorrect owner
         require(to != address(0), '0x'); //  transfer to the zero address
+
+        _beforeTokenTransfers(from, to, tokenId, 1);
 
         // Clear approvals from the previous owner
         _approve(address(0), tokenId, prevOwnership.addr);
@@ -489,9 +522,20 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
 
             _ownerships[tokenId].addr = to;
             _ownerships[tokenId].startTimestamp = uint64(block.timestamp);
+
+            // If the ownership slot of tokenId+1 is not explicitly set, that means the transfer initiator owns it.
+            // Set the slot of tokenId+1 explicitly in storage to maintain correctness for ownerOf(tokenId+1) calls.
+            uint256 nextTokenId = tokenId + 1;
+            if (_ownerships[nextTokenId].addr == address(0)) {
+                if (_exists(nextTokenId)) {
+                    _ownerships[nextTokenId].addr = prevOwnership.addr;
+                    _ownerships[nextTokenId].startTimestamp = prevOwnership.startTimestamp;
+                }
+            }
         }
 
         emit Transfer(from, to, tokenId);
+        _afterTokenTransfers(from, to, tokenId, 1);
     }
 
     /**
@@ -540,4 +584,42 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
             return true;
         }
     }
+
+    /**
+     * @dev Hook that is called before a set of serially-ordered token ids are about to be transferred. This includes minting.
+     *
+     * startTokenId - the first token id to be transferred
+     * quantity - the amount to be transferred
+     *
+     * Calling conditions:
+     *
+     * - When `from` and `to` are both non-zero, ``from``'s `tokenId` will be
+     * transferred to `to`.
+     * - When `from` is zero, `tokenId` will be minted for `to`.
+     */
+    function _beforeTokenTransfers(
+        address from,
+        address to,
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal virtual {}
+
+    /**
+     * @dev Hook that is called after a set of serially-ordered token ids have been transferred. This includes
+     * minting.
+     *
+     * startTokenId - the first token id to be transferred
+     * quantity - the amount to be transferred
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero.
+     * - `from` and `to` are never both zero.
+     */
+    function _afterTokenTransfers(
+        address from,
+        address to,
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal virtual {}
 }
