@@ -28,8 +28,7 @@ interface IERC2981Royalties {
 }
 
 // mint price of hoops
-// whitelist -- .0824
-// mint price -- .1
+// mint price -- .0824 (to start)
 // mint max -- 20
 
 // Hoops
@@ -62,15 +61,19 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
 
     string private _baseURI = '';
 
+    string private _unrevealedBaseURI = '';
+
     string private _uriSuffix = '';
 
-    uint private _whitelistedMintPrice = 0.0824 ether;
+    uint private _mintPrice = 0.0824 ether;
 
-    uint private _mintPrice = 0.1 ether;
+    uint private _maxMintQuantity = 25;
 
-    uint private _maxMintQuantity = 20;
+    bool _mintIsOpen = false;
 
-    bool _anyoneCanMint = false;
+    uint private _revealIndex = 0;
+
+
 
     struct TokenOwnership {
         address addr;
@@ -88,7 +91,12 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
 
 
     function getMintPrice() public view returns (uint) {
-        return _anyoneCanMint ? _mintPrice : _whitelistedMintPrice;
+        return _mintPrice;
+    }
+
+    // Set the _mintPrice to a new value in ether if the msg.sender is the _owner
+    function setMintPrice(uint newPrice) public onlyOwner {
+        _mintPrice = newPrice;
     }
 
     /**
@@ -112,7 +120,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
 
     function withdraw() public onlyTreasurerOrOwner {
         // This will transfer the remaining contract balance to the owner.
-        // Do not remove this otherwise you will not be able to withdraw the funds.
         (bool os, ) = payable(_treasuryAddress).call{value: address(this).balance}('');
         require(os);
     }
@@ -133,23 +140,17 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
         _;
     }
 
-    modifier onlyValidAccess(
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) {
-        bytes32 hash = keccak256(abi.encodePacked(this, msg.sender));
+    modifier onlyValidAccess() {
         require(
-            _owner == ecrecover(keccak256(abi.encodePacked('\x19Ethereum Signed Message:\n32', hash)), _v, _r, _s) ||
                 _owner == msg.sender ||
-                _anyoneCanMint,
+                _mintIsOpen,
             'invalidaccess'
         );
         _;
     }
 
-    function setOpenMint(bool anyoneCanMint) public onlyOwner {
-        _anyoneCanMint = anyoneCanMint;
+    function setOpenMint(bool mintIsOpen) public onlyOwner {
+        _mintIsOpen = mintIsOpen;
     }
 
     function royaltyInfo(uint256, uint256 value)
@@ -217,7 +218,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
             }
         }
 
-        revert('notoken'); //  unable to get token of owner by index
+        revert('No token found'); //  unable to get token of owner by index
     }
 
     /**
@@ -250,7 +251,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
      * It gradually moves to O(1) as tokens get transferred around in the collection over time.
      */
     function ownershipOf(uint256 tokenId) internal view returns (TokenOwnership memory) {
-        require(_exists(tokenId), 'notoken'); //  owner query for nonexistent token
+        require(_exists(tokenId), 'No token found'); //  owner query for nonexistent token
 
         unchecked {
             for (uint256 curr = tokenId; curr >= 0; curr--) {
@@ -289,12 +290,20 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
      * @dev See {IERC721Metadata-tokenURI}.
      */
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), 'notoken'); // ERC721Metadata: URI query for nonexistent token
-        return bytes(_baseURI).length != 0 ? string(abi.encodePacked(_baseURI, tokenId.toString(), _uriSuffix)) : '';
+        require(_exists(tokenId), 'No token found'); // ERC721Metadata: URI query for nonexistent token
+        return bytes(_baseURI).length != 0 ? string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix)) : '';
     }
 
     function setBaseURI(string memory baseURI) public onlyOwner {
         _baseURI = baseURI;
+    }
+
+    function setUnrevealBaseURI(string memory baseURI) public onlyOwner {
+        _unrevealedBaseURI = baseURI;
+    }
+
+    function setRevealIndex(uint index) public onlyOwner {
+        _revealIndex = index;
     }
 
     function setUriSuffix(string memory uriSuffix) public onlyOwner {
@@ -320,7 +329,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
      * @dev See {IERC721-getApproved}.
      */
     function getApproved(uint256 tokenId) public view override returns (address) {
-        require(_exists(tokenId), 'notoken'); //  approved query for nonexistent token
+        require(_exists(tokenId), 'No token found'); //  approved query for nonexistent token
 
         return _tokenApprovals[tokenId];
     }
@@ -395,41 +404,17 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
         return '"Greatness is defined by how much you want to put into what you do." - LeBron James';
     }
 
-    // Mint for self without a whitelist validation
-    function mint(
-        uint256 quantity
-    ) public payable {
-        _mint(msg.sender, quantity, 0, 0, 0);
-    }
-
-    // Mint for self without a whitelist validation
     function mintForAddress(
         uint256 quantity,
         address to
-    ) public payable {
-        _mint(to, quantity, 0, 0, 0);
+    ) public payable onlyValidAccess() {
+        _mint(to, quantity);
     }
 
-
-    // Mint for self without a whitelist validation
-    function mintForAddress(
-        uint256 quantity,
-        address to,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) public payable onlyValidAccess(_v, _r, _s) {
-        _mint(to, quantity, _v, _r, _s);
-    }
-
-    // Mint for self with a whitelist validation
     function mint(
-        uint256 quantity,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
+        uint256 quantity
     ) public payable {
-        _mint(msg.sender, quantity, _v, _r, _s);
+        _mint(msg.sender, quantity);
     }
 
     /**
@@ -444,18 +429,17 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
      */
     function _mint(
         address to,
-        uint256 quantity,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) internal onlyValidAccess(_v, _r, _s) {
+        uint256 quantity
+    ) internal onlyValidAccess() {
         uint256 startTokenId = currentIndex;
+        require(_owner == msg.sender || _mintIsOpen, 'Minting is currently closed'); // Don't allow anyone to mint if the mint is closed
         require(to != address(0), 'Cannot send to 0x0'); // mint to the 0x0 address
         require(quantity != 0, 'Quantity cannot be 0'); // quantity must be greater than 0
-        require(quantity <= _maxMintQuantity, 'Quantity exceeds mint max'); // quantity must be 5 or less
-        require(msg.value >= (_anyoneCanMint ? _mintPrice : _whitelistedMintPrice) * quantity, "Insufficient funds!");
+        require(_owner == msg.sender || quantity <= _maxMintQuantity, 'Quantity exceeds mint max'); // quantity must be less than max quantity
+        // The owner can mint for free, everyone else needs to pay the price
+        require(_owner == msg.sender || msg.value >= _mintPrice * quantity, "Insufficient funds!");
         require(currentIndex <= 10000, 'No Hoops left!'); // sold out
-        require(currentIndex + quantity <= 10000, 'Not enough Hoops left!'); // cannot mint more than maxIndex tokens
+        require(currentIndex + quantity <= 10000, 'Not enough Hoops left to buy!'); // cannot mint more than maxIndex tokens
 
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 
