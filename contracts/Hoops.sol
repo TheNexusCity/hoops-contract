@@ -12,14 +12,6 @@ import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
 
-/// Interface for the ERC2981 - Token Royalty standard
-interface IERC2981Royalties {
-    function royaltyInfo(uint256 _tokenId, uint256 _value)
-        external
-        view
-        returns (address _receiver, uint256 _royaltyAmount);
-}
-
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
  * the Metadata and Enumerable extension. Built to optimize for lower gas during batch mints.
@@ -31,11 +23,11 @@ interface IERC2981Royalties {
  * Assumes that an owner cannot have more than the 2**128 - 1 (max value of uint128) of supply
  */
 
-contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981Royalties {
+contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     using Address for address;
     using Strings for uint256;
 
-    address _treasuryAddress;
+    address _treasuryAddress = 0x87Bc1aC91E5BeC68BCe0427A0E627828F7c52a67;
 
     string private _baseURI = '';
 
@@ -91,9 +83,8 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
     /**
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
-    constructor(address treasuryAddress) {
+    constructor() {
         _owner = msg.sender;
-        _treasuryAddress = treasuryAddress;
     }
 
     function withdraw() public onlyTreasurerOrOwner {
@@ -215,7 +206,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
             interfaceId == type(IERC721).interfaceId ||
             interfaceId == type(IERC721Metadata).interfaceId ||
             interfaceId == type(IERC721Enumerable).interfaceId ||
-            interfaceId == type(IERC2981Royalties).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
