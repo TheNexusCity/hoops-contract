@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-// Creator: Shawbot @ The Nexus
-// Modified ERC721A contract by Chiru Labs
+// Created by Shawbot & Supernftier @ The Nexus
+// Based on ERC721A contract by Chiru Labs
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
@@ -12,35 +12,13 @@ import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
 
-/// @title IERC2981Royalties
-/// @dev Interface for the ERC2981 - Token Royalty standard
+/// Interface for the ERC2981 - Token Royalty standard
 interface IERC2981Royalties {
-    /// @notice Called with the sale price to determine how much royalty
-    //          is owed and to whom.
-    /// @param _tokenId - the NFT asset queried for royalty information
-    /// @param _value - the sale price of the NFT asset specified by _tokenId
-    /// @return _receiver - address of who should be sent the royalty payment
-    /// @return _royaltyAmount - the royalty payment amount for value sale price
     function royaltyInfo(uint256 _tokenId, uint256 _value)
         external
         view
         returns (address _receiver, uint256 _royaltyAmount);
 }
-
-// mint price of hoops
-// mint price -- .0824 (to start)
-// mint max -- 20
-
-// Hoops
-// HOOPS
-
-// royalty percentage - 10%
-
-// owner address + seed phrase + private key
-
-// art editable
-
-// 
 
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
@@ -69,11 +47,11 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
 
     uint private _maxMintQuantity = 25;
 
+    uint private _maxSupply = 10000;
+
     bool _mintIsOpen = false;
 
     uint private _revealIndex = 0;
-
-
 
     struct TokenOwnership {
         address addr;
@@ -141,12 +119,12 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
     }
 
     modifier onlyValidAccess() {
-        require(
-                _owner == msg.sender ||
-                _mintIsOpen,
-            'invalidaccess'
-        );
+        require(_owner == msg.sender || _mintIsOpen, 'You are not the owner and the mint is not open');
         _;
+    }
+
+    function isMintOpen() public view returns (bool) {
+        return _mintIsOpen;
     }
 
     function setOpenMint(bool mintIsOpen) public onlyOwner {
@@ -182,6 +160,14 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
      */
     function totalSupply() public view override returns (uint256) {
         return currentIndex;
+    }
+
+    function maxSupply() public view returns (uint256) {
+        return _maxMintQuantity;
+    }
+
+    function availableSuply() public view returns (uint256) {
+        return _maxSupply - currentIndex;
     }
 
     /**
@@ -438,8 +424,8 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable, IERC2981R
         require(_owner == msg.sender || quantity <= _maxMintQuantity, 'Quantity exceeds mint max'); // quantity must be less than max quantity
         // The owner can mint for free, everyone else needs to pay the price
         require(_owner == msg.sender || msg.value >= _mintPrice * quantity, "Insufficient funds!");
-        require(currentIndex <= 10000, 'No Hoops left!'); // sold out
-        require(currentIndex + quantity <= 10000, 'Not enough Hoops left to buy!'); // cannot mint more than maxIndex tokens
+        require(currentIndex <= _maxSupply, 'No Hoops left!'); // sold out
+        require(currentIndex + quantity <= _maxSupply, 'Not enough Hoops left to buy!'); // cannot mint more than maxIndex tokens
 
         _beforeTokenTransfers(address(0), to, startTokenId, quantity);
 
