@@ -148,7 +148,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         return _maxSupply;
     }
 
-    function availableSuply() public view returns (uint256) {
+    function availableSupply() public view returns (uint256) {
         return _maxSupply - (currentIndex - 1);
     }
 
