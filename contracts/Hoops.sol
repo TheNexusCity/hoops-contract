@@ -122,16 +122,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         _mintIsOpen = mintIsOpen;
     }
 
-    function royaltyInfo(uint256, uint256 value)
-        external
-        view
-        override
-        returns (address receiver, uint256 royaltyAmount)
-    {
-        return (_treasuryAddress, value / 10); // 10% royalty
-    }
-
-    uint256 internal currentIndex;
+    uint256 internal currentIndex = 1;
 
     // Mapping from token ID to ownership details
     // An empty struct value does not necessarily mean the token is unowned. See ownershipOf implementation for details.
@@ -150,7 +141,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      * @dev See {IERC721Enumerable-totalSupply}.
      */
     function totalSupply() public view override returns (uint256) {
-        return currentIndex;
+        return currentIndex - 1;
     }
 
     function maxSupply() public view returns (uint256) {
@@ -158,14 +149,14 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     }
 
     function availableSuply() public view returns (uint256) {
-        return _maxSupply - currentIndex;
+        return _maxSupply - (currentIndex - 1);
     }
 
     /**
      * @dev See {IERC721Enumerable-tokenByIndex}.
      */
     function tokenByIndex(uint256 index) public view override returns (uint256) {
-        require(index < currentIndex, 'idx>bnds'); // global index out of bounds
+        require(index < currentIndex && index > 0, 'Index must be between 1 and 10,000');
         return index;
     }
 
@@ -175,13 +166,13 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      * It may also degrade with extremely large collection sizes (e.g >> 10000), test for your use case.
      */
     function tokenOfOwnerByIndex(address tokenOwner, uint256 index) public view override returns (uint256) {
-        require(index < balanceOf(tokenOwner), 'oIdx>bnds'); //  owner index out of bounds
+        require(index < balanceOf(tokenOwner), 'Owner index is out of bounds');
         uint256 tokenIdsIdx;
         address currOwnershipAddr;
 
         // Counter overflow is impossible as the loop breaks when uint256 i is equal to another uint256 numMintedSoFar.
         unchecked {
-            for (uint256 i; i < currentIndex; i++) {
+            for (uint256 i = 1; i < currentIndex; i++) {
                 TokenOwnership memory ownership = _ownerships[i];
                 if (ownership.addr != address(0)) {
                     currOwnershipAddr = ownership.addr;
@@ -238,7 +229,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
             }
         }
 
-        revert('noowner'); //  unable to determine the owner of token
+        revert('No owner'); //  unable to determine the owner of token
     }
 
     /**
@@ -291,11 +282,11 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      */
     function approve(address to, uint256 tokenId) public override {
         address owner = Hoops.ownerOf(tokenId);
-        require(to != owner, 'notowner'); //  approval to current owner
+        require(to != owner, 'Only the owner can call this function'); //  approval to current owner
 
         require(
             msg.sender == owner || isApprovedForAll(owner, msg.sender),
-            'notapproved' //  approve caller is not owner nor approved for all
+            'Not approved' //  approve caller is not owner nor approved for all
         );
 
         _approve(to, tokenId, owner);
@@ -314,7 +305,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      * @dev See {IERC721-setApprovalForAll}.
      */
     function setApprovalForAll(address operator, bool approved) public override {
-        require(operator != msg.sender, 'notcaller'); //  approve to caller
+        require(operator != msg.sender, 'Not the caller'); //  approve to caller
 
         _operatorApprovals[msg.sender][operator] = approved;
         emit ApprovalForAll(msg.sender, operator, approved);
@@ -373,7 +364,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      * Tokens start existing when they are minted (`_mint`),
      */
     function _exists(uint256 tokenId) internal view returns (bool) {
-        return tokenId < currentIndex;
+        return tokenId < currentIndex && tokenId > 0;
     }
 
     function goat() public pure returns (string memory) {
@@ -464,8 +455,8 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
             getApproved(tokenId) == msg.sender ||
             isApprovedForAll(prevOwnership.addr, msg.sender));
 
-        require(isApprovedOrOwner, 'notapproved'); //  transfer caller is not owner nor approved
-        require(prevOwnership.addr == from, 'badowner'); // transfer from incorrect owner
+        require(isApprovedOrOwner, 'Notapproved'); //  transfer caller is not owner nor approved
+        require(prevOwnership.addr == from, 'Invalid Owner'); // transfer from incorrect owner
         require(to != address(0), '0x'); //  transfer to the zero address
 
         _beforeTokenTransfers(from, to, tokenId, 1);
