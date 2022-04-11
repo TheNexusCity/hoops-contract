@@ -9,9 +9,9 @@ describe('Hoops Contract Tests', async function()  {
 
         Hoops = await ethers.getContractFactory('Hoops');
 
-        hoops = await Hoops.deploy(owner.address);
+        hoops = await Hoops.deploy();
 
-        await hoops.deployed(owner.address);
+        await hoops.deployed();
         
         expect(await hoops.totalSupply()).to.equal(0);
 
@@ -25,9 +25,9 @@ describe('Hoops Contract Tests', async function()  {
 
         Hoops = await ethers.getContractFactory('Hoops');
 
-        hoops = await Hoops.deploy(addr2.address);
+        hoops = await Hoops.deploy();
 
-        await hoops.deployed(addr2.address);
+        await hoops.deployed();
 
         expect(await hoops.totalSupply()).to.equal(0);
 
@@ -58,7 +58,7 @@ describe('Hoops Contract Tests', async function()  {
 
     describe('Transactions ',async () => {
         it('Should transfer from owner to other address', async function()  {
-            await hoops.transferFrom(addr1.address,addr2.address,0);
+            await hoops.transferFrom(addr1.address,addr2.address,1);
             const tknBal = await hoops.balanceOf(addr1.address);
             expect(tknBal).to.equal(0);
         });

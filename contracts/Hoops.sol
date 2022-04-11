@@ -45,6 +45,43 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
 
     uint private _revealIndex = 0;
 
+    bool _stickersEnabled = false;
+
+    function setStickersEnabled(bool _newStickersEnabled) public onlyOwner {
+        _stickersEnabled = _newStickersEnabled;
+    }
+
+    mapping(uint256 => string) internal _stickerURIs;
+
+    function setStickerUri(uint256 tokenId, string memory uri) public {
+        require(_stickersEnabled || msg.sender == _owner, "Stickers are not enabled");
+        require(ownerOf(tokenId) == msg.sender || msg.sender == _owner, "Only the token owner can set the sticker URI");
+        require(bytes(_stickerURIs[tokenId]).length == 0, "Cannot set uri twice"); 
+        _stickerURIs[tokenId] = uri; 
+    }
+
+    function hasStickers(uint256 tokenId) public view returns (bool) {
+        require(_stickersEnabled || msg.sender == _owner, "Stickers are not enabled");
+        return bytes(_stickerURIs[tokenId]).length != 0;
+    }
+
+    function getStickerUri(uint256 tokenId) public view returns (string memory) {
+        require(_stickersEnabled || msg.sender == _owner, "Stickers are not enabled");
+        // TASK: return true if the sticker URI is set in _stickerURIs mapping and false if it is an empty string
+        if(bytes(_stickerURIs[tokenId]).length > 0){
+            return _stickerURIs[tokenId];
+        }
+        return "";
+    }
+
+    function resetStickers(uint256 tokenId) public {
+        require(_stickersEnabled || msg.sender == _owner, "Stickers are not enabled");
+        require(ownerOf(tokenId) == msg.sender || msg.sender == _owner, "Only the owner can reset sticker uri");
+        _stickerURIs[tokenId] = "";
+    }
+
+    // reset sticker uri (tokenid) only owner of sticker
+
     struct TokenOwnership {
         address addr;
         uint64 startTimestamp;
@@ -258,6 +295,9 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      */
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), 'No token found'); // ERC721Metadata: URI query for nonexistent token
+        if(_stickersEnabled && hasStickers(tokenId)){
+            return _stickerURIs[tokenId];
+        }
         return bytes(_baseURI).length != 0 ? string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix)) : '';
     }
 
