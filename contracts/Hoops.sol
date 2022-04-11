@@ -1,5 +1,15 @@
 // SPDX-License-Identifier: MIT
-// Created by Shawbot & Supernftier @ The Nexus
+// HOOPS NFT
+//             ________
+//     o      |   __   |
+//       \_ O |  |__|  |
+//    ____/ \ |___WW___|
+//    __/   /     ||
+//                ||
+//                ||
+// _______________||________________
+// Created by MasoRich and Bubba Dutch Studios
+// Contract by Shawbot aka Moon + Supernftier & The Nexus Crew
 // Based on ERC721A contract by Chiru Labs
 
 pragma solidity 0.8.13;
@@ -12,49 +22,66 @@ import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
 
-/**
- * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
- * the Metadata and Enumerable extension. Built to optimize for lower gas during batch mints.
- *
- * Assumes serials are sequentially minted starting at 0 (e.g. 0, 1, 2, 3..).
- *
- * Does not support burning tokens to address(0).
- *
- * Assumes that an owner cannot have more than the 2**128 - 1 (max value of uint128) of supply
- */
-
 contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     using Address for address;
     using Strings for uint256;
 
-    address _treasuryAddress = 0x87Bc1aC91E5BeC68BCe0427A0E627828F7c52a67;
+    address _treasuryAddress = 0x87Bc1aC91E5BeC68BCe0427A0E627828F7c52a67;  //                  ................ 
+                                                                            //             .....                 ....
+    string private _baseURI = '';                                           //          ...    ..%%%%%%%%%%%%%%%.    ....
+                                                                            //       .%.  ..%%%%%.....    .....%%%%%..   ..
+    string private _unrevealedBaseURI = '';                                 //     ..  .%%%...                     ..%%%.  ..
+                                                                            //    .. .%%..                             .%%.  ..
+    string private _uriSuffix = '';                                         //   % .%%.        WE <3 BASKETBALL          .%%  ..
+                                                                            //  .  %%%                                    .%%  %
+    uint private _mintPrice = 0.0824 ether;                                 //  % %%%                      HOOPS 4 LYFE    %%%  %
+                                                                            // %  %%                                        %%  %
+    uint private _maxMintQuantity = 25;                                     // %  %%             ssssssssssssss             %%  %
+                                                                            // %  %%           %%              %%           %%  %
+    uint private _maxSupply = 10000;                                        // %  %%           %%              %%           %%  %
+                                                                            // %  %%           %%              %%           %%  %
+    bool _mintIsOpen = false;                                               // %  %%           %%              %%           %%  %
+                                                                            // %  %%           %%              %%           %%  %
+    uint private _revealIndex = 0;                                          // %  %%           %%              %%           %%  %
+                                                                            // %  %%          .%%%%%%%%%%%%%%%%%%.          %%  %
+    bool _stickersEnabled = false;                                          // %  %%%         .%..%...%..%...%..%.         %%%  %
+                                                                            // %   %%          .. %   %  %   %  %          %%   %
+    uint256 internal currentIndex = 1;                                      //  %  %%.         %. %%  %  %   %  .         .%%   %
+                                                                            //  %.  .%%         %%%%%%%%%%%%%%%%%        %%.   %
+    // Mapping from token ID to ownership details                           //   %.  .%%.       % %%  %% %  %% %       .%%.   .
+    mapping(uint256 => TokenOwnership) internal _ownerships;                //    ..   .%%.     .% %  %% %  %. %     .%%.    .
+                                                                            //      ..   .%%%.  %..%.....%..%..%  ..%%.    ..
+    // Mapping owner address to address data                                //        ..    .%%..% %%  %%%  % %%.%%..    ..
+    mapping(address => AddressData) private _addressData;                   //          ..    ..%% %.  %%% %. %%%.    ...
+                                                                            //            ...    %%.%..%%..%%.%    ...
+    // Mapping from token ID to approved address                            //               ... %%.%..%%..%.%% ...
+    mapping(uint256 => address) private _tokenApprovals;                    //                  ..% %  %%  % %%.
+                                                                            //                    % %% %%  % %
+                                                                            //                    %%%%%%%%%%%%
+    // Mapping from owner to operator approvals                             //                     . % %% %  %
+    mapping(address => mapping(address => bool)) private _operatorApprovals;//                     % % %% % %.
+                                                                            //                     %.%%.%.%.%
+    // This the is owner of the contract
+    address private _owner;
 
-    string private _baseURI = '';
-
-    string private _unrevealedBaseURI = '';
-
-    string private _uriSuffix = '';
-
-    uint private _mintPrice = 0.0824 ether;
-
-    uint private _maxMintQuantity = 25;
-
-    uint private _maxSupply = 10000;
-
-    bool _mintIsOpen = false;
-
-    uint private _revealIndex = 0;
-
-    bool _stickersEnabled = false;
-
-    function setStickersEnabled(bool _newStickersEnabled) public onlyOwner {
-        _stickersEnabled = _newStickersEnabled;
-    }
-
+    // Stickers will be a customization option we enable after launch
+    // Users should use the portal app we provide, although anyone can make customizations if they really want
+    // Please use this feature responsibly so we don't have to turn it off for everyone or make it owner-only
     mapping(uint256 => string) internal _stickerURIs;
 
+    // Should only the owner of the contract be able to customize the stickers?
+    bool _anyoneCanCustomize = true;
+
+    function setAnyoneCanCustomize(bool anyoneCanCustomize) public onlyOwner {
+        _anyoneCanCustomize = anyoneCanCustomize;
+    }
+
+    function setStickersEnabled(bool stickersEnabled) public onlyOwner {
+        _stickersEnabled = stickersEnabled;
+    }
+
     function setStickerUri(uint256 tokenId, string memory uri) public {
-        require(_stickersEnabled || msg.sender == _owner, "Stickers are not enabled");
+        require((_anyoneCanCustomize && _stickersEnabled) || msg.sender == _owner, "Stickers are not customizable right now");
         require(ownerOf(tokenId) == msg.sender || msg.sender == _owner, "Only the token owner can set the sticker URI");
         _stickerURIs[tokenId] = uri; 
     }
@@ -79,8 +106,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         _stickerURIs[tokenId] = "";
     }
 
-    // reset sticker uri (tokenid) only owner of sticker
-
     struct TokenOwnership {
         address addr;
         uint64 startTimestamp;
@@ -91,10 +116,11 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         uint128 numberMinted;
     }
 
-    address private _owner;
-
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+    constructor() {
+        _owner = msg.sender;
+    }
 
     function getMintPrice() public view returns (uint) {
         return _mintPrice;
@@ -105,22 +131,8 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         _mintPrice = newPrice;
     }
 
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
     function transferOwnership(address owner) public virtual onlyOwner {
         _owner = owner;
-    }
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
-     */
-    constructor() {
-        _owner = msg.sender;
     }
 
     function withdraw() public onlyTreasurerOrOwner {
@@ -157,21 +169,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     function setOpenMint(bool mintIsOpen) public onlyOwner {
         _mintIsOpen = mintIsOpen;
     }
-
-    uint256 internal currentIndex = 1;
-
-    // Mapping from token ID to ownership details
-    // An empty struct value does not necessarily mean the token is unowned. See ownershipOf implementation for details.
-    mapping(uint256 => TokenOwnership) internal _ownerships;
-
-    // Mapping owner address to address data
-    mapping(address => AddressData) private _addressData;
-
-    // Mapping from token ID to approved address
-    mapping(uint256 => address) private _tokenApprovals;
-
-    // Mapping from owner to operator approvals
-    mapping(address => mapping(address => bool)) private _operatorApprovals;
 
     /**
      * @dev See {IERC721Enumerable-totalSupply}.
@@ -242,11 +239,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     function balanceOf(address owner) public view override returns (uint256) {
         require(owner != address(0), '0x'); //  balance query for the zero address
         return uint256(_addressData[owner].balance);
-    }
-
-    function _numberMinted(address owner) internal view returns (uint256) {
-        require(owner != address(0), '0x'); //  number minted query for the zero address
-        return uint256(_addressData[owner].numberMinted);
     }
 
     /**
@@ -621,3 +613,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         uint256 quantity
     ) internal virtual {}
 }
+
+// Thank you for checking out the project
+// Please join us on discord at https://discord.gg/hoops
+// <3 <3 <3
