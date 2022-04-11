@@ -301,7 +301,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     }
 
     /**
-     * @dev This gets us the non-sticker URI
+     * @dev This gets us the non-sticker URI, even if stickers are enabled
      */
     function baseTokenURI(uint256 tokenId) public view virtual returns (string memory) {
         require(_exists(tokenId), 'No token found'); // ERC721Metadata: URI query for nonexistent token
