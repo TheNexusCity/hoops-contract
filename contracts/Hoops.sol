@@ -56,7 +56,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     function setStickerUri(uint256 tokenId, string memory uri) public {
         require(_stickersEnabled || msg.sender == _owner, "Stickers are not enabled");
         require(ownerOf(tokenId) == msg.sender || msg.sender == _owner, "Only the token owner can set the sticker URI");
-        require(bytes(_stickerURIs[tokenId]).length == 0, "Cannot set uri twice"); 
         _stickerURIs[tokenId] = uri; 
     }
 
@@ -296,8 +295,16 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), 'No token found'); // ERC721Metadata: URI query for nonexistent token
         if(_stickersEnabled && hasStickers(tokenId)){
-            return _stickerURIs[tokenId];
+            return string(abi.encodePacked(_stickerURIs[tokenId], tokenId.toString(), _uriSuffix));
         }
+        return bytes(_baseURI).length != 0 ? string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix)) : '';
+    }
+
+    /**
+     * @dev This gets us the non-sticker URI
+     */
+    function baseTokenURI(uint256 tokenId) public view virtual returns (string memory) {
+        require(_exists(tokenId), 'No token found'); // ERC721Metadata: URI query for nonexistent token
         return bytes(_baseURI).length != 0 ? string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix)) : '';
     }
 
