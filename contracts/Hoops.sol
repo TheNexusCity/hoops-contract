@@ -1,4 +1,14 @@
 // SPDX-License-Identifier: MIT
+pragma solidity 0.8.13;
+
+import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
+import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol';
+import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol';
+import '@openzeppelin/contracts/utils/Address.sol';
+import '@openzeppelin/contracts/utils/Strings.sol';
+import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
+
 // HOOPS NFT
 //             ________
 //     o      |   __   |
@@ -9,18 +19,8 @@
 //                ||
 // _______________||________________
 // Created by MasoRich and Bubba Dutch Studios
-// Contract by Shawbot aka Moon + Supernftier & The Nexus Crew
+// Contract by mö̵͊ö̵͊n & The Nexus Crew
 // Based on ERC721A contract by Chiru Labs
-
-pragma solidity 0.8.13;
-
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
-import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol';
-import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol';
-import '@openzeppelin/contracts/utils/Address.sol';
-import '@openzeppelin/contracts/utils/Strings.sol';
-import '@openzeppelin/contracts/utils/introspection/ERC165.sol';
 
 contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     using Address for address;
