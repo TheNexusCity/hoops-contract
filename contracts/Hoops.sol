@@ -290,7 +290,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         if(_stickersEnabled && hasStickers(tokenId)){
             return string(abi.encodePacked(_stickerURIs[tokenId], tokenId.toString(), _uriSuffix));
         }
-        return bytes(_baseURI).length != 0 ? string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix)) : '';
+        return string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix));
     }
 
     /**
@@ -298,7 +298,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      */
     function baseTokenURI(uint256 tokenId) public view virtual returns (string memory) {
         require(_exists(tokenId), 'No token found'); // ERC721Metadata: URI query for nonexistent token
-        return bytes(_baseURI).length != 0 ? string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix)) : '';
+        return string(abi.encodePacked(tokenId < _revealIndex ? _baseURI : _unrevealedBaseURI, tokenId.toString(), _uriSuffix));
     }
 
     function setBaseURI(string memory baseURI) public onlyOwner {
