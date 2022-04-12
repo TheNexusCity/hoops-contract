@@ -26,14 +26,14 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     using Address for address;
     using Strings for uint256;
 
-    string private _unrevealedBaseURI = 'ipfs://QmekCwrU6SsTNcFEgCs36kcry6KE7zeBsSuC1nXi5KZL6o'; 
+    string private _unrevealedBaseURI = 'ipfs://QmekCwrU6SsTNcFEgCs36kcry6KE7zeBsSuC1nXi5KZL6o/'; 
                                                                             //                  ................ 
                                                                             //             .....                 ....
     string private _baseURI = '';                                           //          ...    ..%%%%%%%%%%%%%%%.    ....
                                                                             //       .%.  ..%%%%%.....    .....%%%%%..   ..
     address _treasuryAddress = 0x87Bc1aC91E5BeC68BCe0427A0E627828F7c52a67;  //     ..  .%%%...                     ..%%%.  ..
                                                                             //    .. .%%..                             .%%.  ..
-    string private _uriSuffix = '';                                         //   % .%%.        WE <3 BASKETBALL          .%%  ..
+    string private _uriSuffix = '.json';                                    //   % .%%.        WE <3 BASKETBALL          .%%  ..
                                                                             //  .  %%%                                    .%%  %
     uint private _mintPrice = 0.0824 ether;                                 //  % %%%                      HOOPS 4 LYFE    %%%  %
                                                                             // %  %%                                        %%  %
