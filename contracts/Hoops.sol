@@ -26,11 +26,12 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
     using Address for address;
     using Strings for uint256;
 
-    address _treasuryAddress = 0x87Bc1aC91E5BeC68BCe0427A0E627828F7c52a67;  //                  ................ 
+    string private _unrevealedBaseURI = 'ipfs://QmekCwrU6SsTNcFEgCs36kcry6KE7zeBsSuC1nXi5KZL6o'; 
+                                                                            //                  ................ 
                                                                             //             .....                 ....
     string private _baseURI = '';                                           //          ...    ..%%%%%%%%%%%%%%%.    ....
                                                                             //       .%.  ..%%%%%.....    .....%%%%%..   ..
-    string private _unrevealedBaseURI = '';                                 //     ..  .%%%...                     ..%%%.  ..
+    address _treasuryAddress = 0x87Bc1aC91E5BeC68BCe0427A0E627828F7c52a67;  //     ..  .%%%...                     ..%%%.  ..
                                                                             //    .. .%%..                             .%%.  ..
     string private _uriSuffix = '';                                         //   % .%%.        WE <3 BASKETBALL          .%%  ..
                                                                             //  .  %%%                                    .%%  %
@@ -145,7 +146,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(_owner == msg.sender, 'Ownable: caller is not the owner');
+        require(_owner == msg.sender, 'Caller is not the owner');
         _;
     }
 
@@ -153,7 +154,7 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
      * @dev Throws if called by any account other than the owner or treasurer.
      */
     modifier onlyTreasurerOrOwner() {
-        require(_owner == msg.sender, 'Ownable: caller is not the owner');
+        require(_owner == msg.sender || _owner == _treasuryAddress, 'Caller is not the owner or treasurer');
         _;
     }
 
@@ -447,8 +448,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         require(currentIndex <= _maxSupply, 'No Hoops left!'); // sold out
         require(currentIndex + quantity <= _maxSupply, 'Not enough Hoops left to buy!'); // cannot mint more than maxIndex tokens
 
-        _beforeTokenTransfers(address(0), to, startTokenId, quantity);
-
         unchecked {
             _addressData[to].balance += uint128(quantity);
             _addressData[to].numberMinted += uint128(quantity);
@@ -470,7 +469,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
 
             currentIndex = updatedIndex;
         }
-        _afterTokenTransfers(address(0), to, startTokenId, quantity);
     }
 
     /**
@@ -498,8 +496,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         require(prevOwnership.addr == from, 'Invalid Owner'); // transfer from incorrect owner
         require(to != address(0), '0x'); //  transfer to the zero address
 
-        _beforeTokenTransfers(from, to, tokenId, 1);
-
         // Clear approvals from the previous owner
         _approve(address(0), tokenId, prevOwnership.addr);
 
@@ -525,7 +521,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
         }
 
         emit Transfer(from, to, tokenId);
-        _afterTokenTransfers(from, to, tokenId, 1);
     }
 
     /**
@@ -574,44 +569,6 @@ contract Hoops is ERC165, IERC721, IERC721Metadata, IERC721Enumerable {
             return true;
         }
     }
-
-    /**
-     * @dev Hook that is called before a set of serially-ordered token ids are about to be transferred. This includes minting.
-     *
-     * startTokenId - the first token id to be transferred
-     * quantity - the amount to be transferred
-     *
-     * Calling conditions:
-     *
-     * - When `from` and `to` are both non-zero, ``from``'s `tokenId` will be
-     * transferred to `to`.
-     * - When `from` is zero, `tokenId` will be minted for `to`.
-     */
-    function _beforeTokenTransfers(
-        address from,
-        address to,
-        uint256 startTokenId,
-        uint256 quantity
-    ) internal virtual {}
-
-    /**
-     * @dev Hook that is called after a set of serially-ordered token ids have been transferred. This includes
-     * minting.
-     *
-     * startTokenId - the first token id to be transferred
-     * quantity - the amount to be transferred
-     *
-     * Calling conditions:
-     *
-     * - when `from` and `to` are both non-zero.
-     * - `from` and `to` are never both zero.
-     */
-    function _afterTokenTransfers(
-        address from,
-        address to,
-        uint256 startTokenId,
-        uint256 quantity
-    ) internal virtual {}
 }
 
 // Thank you for checking out the project
